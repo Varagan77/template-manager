@@ -1,21 +1,16 @@
-import PySimpleGUI as sg
+import tkinter as tk
 
-# All the stuff inside your window.
-layout = [  [sg.Text("What's your name?")],
-            [sg.InputText()],
-            [sg.Button('Ok'), sg.Button('Cancel')] ]
+root = tk.Tk()
 
-# Create the Window
-window = sg.Window('Hello Example', layout)
+scrollbar = tk.Scrollbar(root)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-# Event Loop to process "events" and get the "values" of the inputs
-while True:
-    event, values = window.read()
+mylist = tk.Listbox(root, yscrollcommand=scrollbar.set)
 
-    # if user closes window or clicks cancel
-    if event == sg.WIN_CLOSED or event == 'Cancel':
-        break
+for line in range(100):
+    mylist.insert(tk.END, "This is line number " + str(line))
 
-    print('Hello', values[0], '!')
+mylist.pack(side=tk.LEFT, fill=tk.BOTH)
+scrollbar.config(command=mylist.yview)
 
-window.close()
+root.mainloop()
