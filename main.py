@@ -1,150 +1,102 @@
-import sys
-import Tkinter as tk
-from tkFileDialog import askopenfilename, asksaveasfilename
+import tkinter as tk
+from tkinter import ttk, messagebox
+from datetime import date
 
+NOTICE_TYPES = ["Notice!", "Final Notice!", "Handed!"]
+DAYS_OPTIONS = [30, 60, 90]
 
-class App(tk.Tk):
-
-    """
-    A simple demo of the basic Tkinter widgets. This can be used as a skeleton for a simple GUI applications.
-    Unfortunately, on my system (Ubuntu) it looks like shit.
-    """
-
+class NoticeApp(tk.Tk):
     def __init__(self):
-        tk.Tk.__init__(self)
+        super().__init__()
+        self.title("Payment Notice Generator")
+        self.geometry("620x700")
+        self.resizable(False, False)
+        self.create_widgets()
 
+    def create_widgets(self):
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill="both", expand=True)
 
-        self.create_widget_frame()
+        # -------- CLIENT DETAILS --------
+        ttk.Label(frame, text="Client Details", font=("Arial", 10, "bold"))\
+            .grid(row=0, column=0, columnspan=2, pady=(0, 5), sticky="w")
 
-        button_box = tk.Frame(self)
-        tk.Button(button_box, text='OK', command=self.on_ok_clicked).grid(pady=15)
-        button_box.pack()
+        self.name = self.add_entry(frame, "Name", 1)
+        self.surname = self.add_entry(frame, "Surname", 2)
+        self.phone = self.add_entry(frame, "Phone / Cell", 3)
+        self.last_paid = self.add_entry(frame, "Date Last Paid (DD/MM/YYYY)", 4)
 
-        self.create_menu()
-        self.set_keybindings()
-        App.center_on_screen(self)
+        # -------- NOTICE OPTIONS --------
+        ttk.Label(frame, text="Notice Options", font=("Arial", 10, "bold"))\
+            .grid(row=5, column=0, columnspan=2, pady=(15, 5), sticky="w")
 
+        ttk.Label(frame, text="Notice Type").grid(row=6, column=0, sticky="w")
+        self.notice_type = ttk.Combobox(frame, values=NOTICE_TYPES, state="readonly")
+        self.notice_type.current(0)
+        self.notice_type.grid(row=6, column=1, sticky="ew")
 
-    @staticmethod
-    def center_on_screen(toplevel):
-        toplevel.update_idletasks()
-        w = toplevel.winfo_screenwidth()
-        h = toplevel.winfo_screenheight()
-        size = tuple(int(_) for _ in toplevel.geometry().split('+')[0].split('x'))
-        x = w/2 - size[0]/2
-        y = h/2 - size[1]/2
-        toplevel.geometry('%dx%d+%d+%d' % (size + (x, y)))
+        ttk.Label(frame, text="Days Outstanding").grid(row=7, column=0, sticky="w")
+        self.days_outstanding = ttk.Combobox(frame, values=DAYS_OPTIONS, state="readonly")
+        self.days_outstanding.current(0)
+        self.days_outstanding.grid(row=7, column=1, sticky="ew")
 
+        # -------- BUSINESS DETAILS --------
+        ttk.Label(frame, text="Business Details (Footer)", font=("Arial", 10, "bold"))\
+            .grid(row=8, column=0, columnspan=2, pady=(15, 5), sticky="w")
 
-    def create_widget_frame(self):
+        self.business_name = self.add_entry(frame, "Business Name", 9)
+        self.business_address = self.add_entry(frame, "Address / Location", 10)
+        self.business_phone = self.add_entry(frame, "Business Phone", 11)
+        self.business_email = self.add_entry(frame, "Business Email", 12)
+        self.sign_off = self.add_entry(frame, "Sign-off Name", 13)
 
-        label_config = {'sticky': tk.E, 'column': 0, 'padx': 5, 'pady': 5}
-        widget_config = {'sticky': tk.W, 'column': 1, 'padx': 5, 'pady': 5}
+        # -------- ACTION --------
+        ttk.Button(frame, text="Generate Notice", command=self.generate_notice)\
+            .grid(row=14, column=0, columnspan=2, pady=15)
 
-        widget_frame = tk.Frame(self)
-        current_row = 0
+        # -------- OUTPUT --------
+        self.output = tk.Text(frame, height=14, wrap="word")
+        self.output.grid(row=15, column=0, columnspan=2, sticky="nsew")
 
-        tk.Label(widget_frame, text='Entry (text): ').grid(label_config, row=current_row)
-        self.entry = tk.Entry(widget_frame)
-        self.entry.grid(row=current_row, column=1, sticky=tk.E)
-        current_row += 1
+        frame.columnconfigure(1, weight=1)
 
-        tk.Label(widget_frame, text='Scale (number): ').grid(label_config, row=current_row)
-        self.scale = tk.Scale(widget_frame, from_=0, to=10, resolution=0.1, orient=tk.HORIZONTAL)
-        self.scale.grid(widget_config, row=current_row)
-        current_row += 1
+    def add_entry(self, parent, label, row):
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=4)
+        entry = ttk.Entry(parent)
+        entry.grid(row=row, column=1, sticky="ew")
+        return entry
 
-        tk.Label(widget_frame, text='Checkbox (boolean): ').grid(label_config, row=current_row)
-        self.checkbox_val = tk.IntVar()
-        self.checkbox = tk.Checkbutton(widget_frame, variable=self.checkbox_val)
-        self.checkbox.grid(widget_config, row=current_row)
-        current_row += 1
+    def generate_notice(self):
+        if not self.name.get() or not self.phone.get():
+            messagebox.showerror("Missing Data", "Client name and phone number are required.")
+            return
 
-        tk.Label(widget_frame, text='Spinbox (number): ').grid(label_config, row=current_row)
-        self.spinbox = tk.Spinbox(widget_frame, from_=0, to=10)
-        self.spinbox.grid(widget_config, row=current_row)
-        current_row += 1
+        today = date.today().strftime("%d/%m/%Y")
 
-        self.enum_val = tk.StringVar(widget_frame)
-        self.enum_val.set('one') # default value
-        tk.Label(widget_frame, text='OptionMenu (enum): ').grid(label_config, row=current_row)
-        self.combobox = tk.OptionMenu(widget_frame, self.enum_val, 'one', 'two', 'three')
-        self.combobox.grid(widget_config, row=current_row)
-        current_row += 1
+        footer = (
+            f"{self.business_name.get()}\n"
+            f"{self.business_address.get()}\n"
+            f"Tel: {self.business_phone.get()}\n"
+            f"Email: {self.business_email.get()}\n\n"
+            f"Regards,\n{self.sign_off.get()}"
+        )
 
-        widget_frame.pack()
+        message = (
+            f"{self.notice_type.get()}\n\n"
+            f"Dear {self.name.get()} {self.surname.get()},\n\n"
+            f"Our records indicate that an amount remains outstanding on your account. "
+            f"The last recorded payment was on {self.last_paid.get()}.\n\n"
+            f"This account is currently {self.days_outstanding.get()} days overdue. "
+            f"Please arrange settlement or contact us should you require clarification.\n\n"
+            f"Date: {today}\n\n"
+            "--------------------------------------\n"
+            f"{footer}"
+        )
 
-
-    def set_keybindings(self):
-        self.bind_all('<Control-o>', lambda event: self.open_file())
-        self.bind_all('<Control-s>', lambda event: self.save_file())
-        self.bind_all('<Control-q>', self.quit_app)
-        self.bind_all('<Control-h>', lambda event: self.show_help())
-        self.bind_all('<Return>', lambda event: self.on_ok_clicked())
-
-
-    def on_ok_clicked(self):
-        print 'Entry text: %s' % self.entry.get()
-        print 'Scale value: %.1f' % self.scale.get()
-        print 'Checkbutton value: %i' % self.checkbox_val.get()
-        print 'Spinbox value: %i' % int(self.spinbox.get())
-        print 'OptionMenu value: %s' % self.enum_val.get()
-
-
-    def create_menu(self):
-        menubar = tk.Menu(self)
-        
-        fileMenu = tk.Menu(menubar, tearoff=False)
-        menubar.add_cascade(label="File", underline=0, menu=fileMenu)
-        fileMenu.add_command(label="Open", underline=1, command=self.open_file, accelerator="Ctrl+O")
-        fileMenu.add_command(label="Save", underline=1, command=self.save_file, accelerator="Ctrl+S")
-        fileMenu.add_command(label="Quit", underline=1, command=self.quit_app, accelerator="Ctrl+Q")
-        
-        helpMenu = tk.Menu(menubar, tearoff=False)
-        menubar.add_cascade(label="Help", underline=0, menu=helpMenu)
-        helpMenu.add_command(label="Help", underline=1, command=self.show_help, accelerator="Ctrl+H")
-        helpMenu.add_command(label="About", underline=1, command=self.about_app)
-        
-        self.config(menu=menubar)
-
-
-    def open_file(self):
-        """Options are explained here: http://tkinter.unpythonic.net/wiki/tkFileDialog"""
-        filename = askopenfilename(title='Open a file')
-        if filename:
-            print 'Open and do something with %s' % filename
-
-
-    def save_file(self):
-        """Options are explained here: http://tkinter.unpythonic.net/wiki/tkFileDialog"""
-        filename = asksaveasfilename()
-        if filename:
-            print 'Save something to %s' % filename
-
-
-    def quit_app(self, event):
-        sys.exit(0)
-
-
-    def show_help(self):
-        print 'Open a link to online help/wiki here'
-
-
-    def about_app(self):
-        # FIXME: pressing return correctly closes dialog, but also incorrectly fires the main window's 'on_click' method
-        about_text = """
-        Put info about the application here, e.g., name, author(s), version,
-        license, etc. This text will appear in the \"about\" dialog."""
-        about_dialog = tk.Toplevel(self)
-        about_dialog.title('About App')
-        about_dialog.bind('<Escape>', lambda event: about_dialog.destroy())
-        about_dialog.bind('<Return>', lambda event: about_dialog.destroy())
-        App.center_on_screen(about_dialog)
-        tk.Message(about_dialog, text=about_text).pack()
-        button = tk.Button(about_dialog, text='Close', command=about_dialog.destroy).pack()
-
+        self.output.delete("1.0", tk.END)
+        self.output.insert(tk.END, message)
 
 
 if __name__ == "__main__":
-    app = App()
+    app = NoticeApp()
     app.mainloop()
